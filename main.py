@@ -10,15 +10,15 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         # Initialize the TrialManager with the default trial period
-        # self.trial_manager = TrialManager()
+        self.trial_manager = TrialManager()
         # Check trial status
-        # if not self.trial_manager.is_trial_valid():
-        #     QMessageBox.critical(
-        #         self, "Trial End", "Your trial period has end.")
-        #     sys.exit(0)
+        if not self.trial_manager.is_trial_valid():
+            QMessageBox.critical(
+                self, "Trial End", "Your trial period has end.")
+            sys.exit(0)
 
         # Remaining days
-        # days_left = self.trial_manager.days_remaining()
+        days_left = self.trial_manager.days_remaining()
 
         self.setWindowTitle("Vehicle Detection")
 
