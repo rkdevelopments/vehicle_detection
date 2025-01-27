@@ -1,8 +1,25 @@
 import sys
 import gc
-from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMessageBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMessageBox, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import QTimer, Qt, QThread, Signal
+import psutil
 from trial_logic import TrialManager
 from raout_one import RouteOne
+from vehicle_detection1 import VehicleDetection1
+
+
+class StatsThread(QThread):
+    stats_updated = Signal(str)
+
+    def __init__(self, detector):
+        super().__init__()
+        self.detector = detector
+
+    def run(self):
+        while True:
+            stats = self.detector.get_stats()
+            self.stats_updated.emit(stats)
+            self.msleep(1000)  # Sleep for 1 second
 
 
 class MainWindow(QMainWindow):
@@ -22,15 +39,40 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Vehicle Detection")
 
-        tab_widget = QTabWidget()
-        tab_widget.addTab(RouteOne(), "Route One")
+        self.tab_widget = QTabWidget()
+        self.tab_widget.addTab(RouteOne(), "Route One")
 
-        self.setCentralWidget(tab_widget)
+        # Add the debug stats area
+        self.stats_label = QLabel()
+        self.stats_label.setAlignment(Qt.AlignLeft)
+        self.stats_label.setWordWrap(True)
+
+        self.detector = VehicleDetection1()
+
+        # Create a layout for the main window
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.tab_widget)
+        main_layout.addWidget(self.stats_label)
+
+        # Create a central widget and set the layout
+        central_widget = QWidget()
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
+
         self.resize(800, 600)
+
+        # Start the stats thread
+        self.stats_thread = StatsThread(self.detector)
+        self.stats_thread.stats_updated.connect(self.update_stats_label)
+        self.stats_thread.start()
+
+    def update_stats_label(self, stats):
+        self.stats_label.setText(stats)
 
     def closeEvent(self, event):
         # Enhanced cleanup
         try:
+            self.stats_thread.terminate()
             central_widget = self.centralWidget()
             if isinstance(central_widget, QTabWidget):
                 for i in range(central_widget.count()):
